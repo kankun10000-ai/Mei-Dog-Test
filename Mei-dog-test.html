@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>メイのいぬ検定道場 Ver1</title>
+<title>メイのいぬ検定道場 Ver2</title>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
 :root{--pink:#ff8fb1;--pink-d:#f06292;--cream:#fff7ef;--lav:#c9b6ff;--lemon:#ffe08a;--ink:#5a3d4a;--ok:#35b98a;--ng:#f0607f}
@@ -70,6 +70,7 @@ button{font-family:inherit;color:inherit;border:none;cursor:pointer}
 .slot.lock{background:#f6eef2;color:#b9a3ad;border-style:dashed}
 .slot.lock span{font-size:20px}
 .note{flex:none;text-align:center;font-size:12px;font-weight:700;color:#8a6b78;line-height:1.35}
+.rbtn{flex:none;align-self:center;background:#fff;border:2px solid #ffa9be;border-radius:99px;padding:6px 18px;font-weight:900;font-size:13px;color:#d14d7c}
 .link{background:none;font-size:12px;text-decoration:underline;color:#b98aa0;font-weight:700;padding:2px 6px}
 #evo{position:absolute;inset:0;background:rgba(255,220,232,.96);display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:9;text-align:center;padding:20px}
 #evo.on{display:flex}
@@ -268,7 +269,7 @@ function home(p,msg){
     body='<div class="stats">'+
       '<div class="stat">正答率<b>'+rate+'%</b></div><div class="stat">累計正解<b>'+S.total+'</b></div><div class="stat">れんぞく<b>'+S.streak+'日</b></div>'+
       '<div class="stat">復習箱（'+lv.name+'）<b>'+bx+'問</b></div><div class="stat">模試ベスト<b class="s">'+(best===null?"—":best+" / "+MOCK_N)+'</b></div><div class="stat">前回の模試<b class="s">'+(last===null?"—":last+" / "+MOCK_N)+'</b></div></div>'+
-      '<div class="note">'+nextText()+'　けいこ '+S.sets+' 回 <button class="link" id="rst">記録をリセット</button></div>';
+      '<div class="note">'+nextText()+'　けいこ '+S.sets+' 回</div><button class="rbtn" id="rst">🗑 記録をリセット</button>';
   }else if(panel==="units"){
     const cols=S.lv==="m"?6:4;
     body='<div class="units" style="grid-template-columns:repeat('+cols+',1fr);grid-auto-rows:1fr">'+lv.units.map(u=>{const s=unitStat(S.lv,u.k),r=s[0]?Math.round(s[1]/s[0]*100):null;
@@ -281,7 +282,7 @@ function home(p,msg){
   }else{
     body='<div class="hero"><div class="pic">'+scene(st)+'</div></div><div class="name">'+STAGES[st][0]+'<small id="hmsg">'+(msg||nextText())+'</small></div>';
   }
-  $("top").innerHTML='<div class="bar"><div class="title">メイのいぬ検定道場<small>Ver1</small></div><div class="chip">🌸 '+S.total+'</div></div>'+
+  $("top").innerHTML='<div class="bar"><div class="title">メイのいぬ検定道場<small>Ver2</small></div><div class="chip">🌸 '+S.total+'</div></div>'+
    '<div class="bar"><div class="seg"><button id="lvb" class="'+(S.lv==="b"?"on":"")+'">初級</button><button id="lvm" class="'+(S.lv==="m"?"on":"")+'">中級</button></div>'+
    '<button class="ib '+(panel==="stats"?"on":"")+'" id="i0">📊</button><button class="ib '+(panel==="album"||panel==="photo"?"on":"")+'" id="i1">🎀</button>'+
    '<button class="ib" id="i2">♪'+(S.bgm?S.bgm:"×")+'</button><button class="ib" id="i3">'+(S.se?"🔔":"🔕")+'</button></div>'+body;
@@ -304,7 +305,7 @@ function home(p,msg){
   $("i3").onclick=()=>{S.se=S.se?0:1;save();$("i3").textContent=S.se?"🔔":"🔕";se("ok")};
   $("top").querySelectorAll(".unit").forEach(b=>b.onclick=()=>{se("tap");start("unit",+b.dataset.u)});
   $("top").querySelectorAll(".slot[data-p]").forEach(b=>b.onclick=()=>{se("tap");photo=+b.dataset.p;home("photo")});
-  const r=$("rst"); if(r){let armed=false;r.onclick=()=>{ if(!armed){armed=true;r.textContent="もう一度おすと全部消えます";return} const keep={lv:S.lv,bgm:S.bgm,se:S.se}; S=Object.assign({total:0,answered:0,sets:0,stage:0,box:{},seen:{},unit:{},mock:null,hist:{b:[],m:[]},day:"",streak:0},keep);save();home("main") }}
+  const r=$("rst"); if(r) r.onclick=()=>{se("tap");askReset()};
   checkEvo();
 }
 
@@ -371,6 +372,13 @@ function answer(k){
   $("bottom").insertAdjacentHTML("beforeend",'<button id="next">'+(G.i+1<G.list.length?"つぎへ":"けっか")+'</button>');
   $("next").onclick=()=>{ se("tap"); G.i++; if(G.i<G.list.length) ask(); else result(); };
   checkEvo();
+}
+function askReset(){
+  const e=$("evo");
+  e.innerHTML='<h2>記録をリセットしますか？</h2><p>正解数・メイの進化・復習箱・模試の記録が<br>ぜんぶ消えて、赤ちゃんメイにもどります。</p><button id="rsy" style="background:#f0607f;box-shadow:0 5px 0 #c9405e">リセットする</button><button id="rsn" style="background:#fff;color:#5a3d4a;box-shadow:0 5px 0 #ffc2d4">やめる</button>';
+  e.classList.add("on");
+  $("rsn").onclick=()=>{se("tap");e.classList.remove("on")};
+  $("rsy").onclick=()=>{ const keep={lv:S.lv,bgm:S.bgm,se:S.se}; S=Object.assign({total:0,answered:0,sets:0,stage:0,box:{},seen:{},unit:{},mock:null,hist:{b:[],m:[]},day:"",streak:0},keep); save(); e.classList.remove("on"); home("main","記録をリセットしました"); };
 }
 function checkEvo(){ const st=stageOf(S.total); if(st>S.stage){ S.stage=st; save(); evolve(st); } }
 function evolve(st){
