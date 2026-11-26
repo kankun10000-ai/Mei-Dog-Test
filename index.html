@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>メイのいぬ検定道場 Ver2</title>
+<title>メイのいぬ検定道場 Ver3</title>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
 :root{--pink:#ff8fb1;--pink-d:#f06292;--cream:#fff7ef;--lav:#c9b6ff;--lemon:#ffe08a;--ink:#5a3d4a;--ok:#35b98a;--ng:#f0607f}
@@ -232,7 +232,7 @@ function touchDay(){const now=new Date(),t=ymd(now);if(S.day===t)return;const y=
 // ===== 音（BGM・効果音）=====
 const AU={ctx:null,timer:null,gain:null,loopAt:0};
 const hz=m=>440*Math.pow(2,(m-69)/12);
-function actx(){ if(!AU.ctx){try{AU.ctx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){return null}} if(AU.ctx.state==="suspended"){try{AU.ctx.resume()}catch(e){}} return AU.ctx }
+function actx(){ if(!AU.ctx){try{AU.ctx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){return null}} if(AU.ctx.state!=="running"){try{AU.ctx.resume()}catch(e){}} return AU.ctx }
 function tone(f,t,d,vol,type,dest){const c=AU.ctx,o=c.createOscillator(),g=c.createGain();o.type=type||"sine";o.frequency.value=f;g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(dest||c.destination);o.start(t);o.stop(t+d+.05)}
 function se(n){ if(!S.se) return; const c=actx(); if(!c) return; const t=c.currentTime+.01;
   if(n==="tap") tone(880,t,.06,.03,"sine");
@@ -251,8 +251,23 @@ function bgmStart(){ bgmStop(); const tr=TR[S.bgm]; if(!tr) return; const c=actx
   const sched=()=>{ if(!AU.gain||c.state!=="running") return; while(AU.loopAt<c.currentTime+.6){ let b=0; tr.mel.forEach(n=>{tone(hz(n[0]),AU.loopAt+b*spb,n[1]*spb*.95,.045,"triangle",g);b+=n[1]}); tr.bass.forEach((m,i)=>{tone(hz(m),AU.loopAt+i*4*spb,spb*1.8,.05,"sine",g);tone(hz(m+12),AU.loopAt+(i*4+2)*spb,spb*1.6,.03,"sine",g)}); AU.loopAt+=32*spb } };
   sched(); AU.timer=setInterval(sched,150);
 }
-document.addEventListener("pointerdown",()=>{ if(S.bgm&&!AU.timer) bgmStart(); else if(AU.ctx&&AU.ctx.state==="suspended") actx() },{passive:true});
-document.addEventListener("visibilitychange",()=>{ if(!AU.ctx) return; if(document.hidden){try{AU.ctx.suspend()}catch(e){}} else if(S.bgm){ try{AU.ctx.resume().then(()=>{AU.loopAt=AU.ctx.currentTime+.1})}catch(e){} } });
+// スマホ（特にiPhone）対策：指を離した瞬間のタップで音を有効化し、消音スイッチ中でも鳴るよう「再生」扱いにする
+function silentUrl(){ const n=4000,b=new Uint8Array(44+n),v=new DataView(b.buffer),w=(o,s)=>{for(let i=0;i<s.length;i++)b[o+i]=s.charCodeAt(i)};
+  w(0,"RIFF");v.setUint32(4,36+n,true);w(8,"WAVEfmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,8000,true);v.setUint16(32,1,true);v.setUint16(34,8,true);w(36,"data");v.setUint32(40,n,true);b.fill(128,44);
+  return URL.createObjectURL(new Blob([b],{type:"audio/wav"})) }
+function unlock(){
+  const c=actx(); if(!c) return;
+  try{ if(navigator.audioSession) navigator.audioSession.type="playback" }catch(e){}
+  if(!AU.un){ AU.un=1;
+    try{ if(!AU.el){ AU.el=new Audio(silentUrl()); AU.el.loop=true; AU.el.setAttribute("playsinline",""); } const p=AU.el.play(); if(p&&p.catch) p.catch(()=>{AU.un=0}); }catch(e){}
+    try{ const bf=c.createBuffer(1,1,22050),s=c.createBufferSource(); s.buffer=bf; s.connect(c.destination); s.start(0) }catch(e){}
+  }
+  if(S.bgm&&!AU.timer) bgmStart();
+}
+["touchend","pointerup","click","keydown"].forEach(ev=>document.addEventListener(ev,unlock,{passive:true,capture:true}));
+document.addEventListener("visibilitychange",()=>{ if(!AU.ctx) return;
+  if(document.hidden){ try{AU.ctx.suspend()}catch(e){} try{AU.el&&AU.el.pause()}catch(e){} AU.un=0 }
+  else if(S.bgm){ try{AU.ctx.resume().then(()=>{AU.loopAt=AU.ctx.currentTime+.1})}catch(e){} } });
 
 // ===== ホーム =====
 let panel="main",photo=0,TM=null;
@@ -282,7 +297,7 @@ function home(p,msg){
   }else{
     body='<div class="hero"><div class="pic">'+scene(st)+'</div></div><div class="name">'+STAGES[st][0]+'<small id="hmsg">'+(msg||nextText())+'</small></div>';
   }
-  $("top").innerHTML='<div class="bar"><div class="title">メイのいぬ検定道場<small>Ver2</small></div><div class="chip">🌸 '+S.total+'</div></div>'+
+  $("top").innerHTML='<div class="bar"><div class="title">メイのいぬ検定道場<small>Ver3</small></div><div class="chip">🌸 '+S.total+'</div></div>'+
    '<div class="bar"><div class="seg"><button id="lvb" class="'+(S.lv==="b"?"on":"")+'">初級</button><button id="lvm" class="'+(S.lv==="m"?"on":"")+'">中級</button></div>'+
    '<button class="ib '+(panel==="stats"?"on":"")+'" id="i0">📊</button><button class="ib '+(panel==="album"||panel==="photo"?"on":"")+'" id="i1">🎀</button>'+
    '<button class="ib" id="i2">♪'+(S.bgm?S.bgm:"×")+'</button><button class="ib" id="i3">'+(S.se?"🔔":"🔕")+'</button></div>'+body;
